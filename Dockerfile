@@ -65,7 +65,7 @@ RUN useradd -m $USERNAME -u $UID && \
     git-lfs \
     jq \
     lsb-release \
-    lib-icu-dev \
+    libicu-dev \
     unzip \
     wget \
     zstd && \
