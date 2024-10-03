@@ -3,7 +3,7 @@ FROM denoland/deno:bin@sha256:393289c70f0d3ab3cf59eb1f57c9aa1d12dcffb65821957e60
 FROM golang:latest@sha256:adee809c2d0009a4199a11a1b2618990b244c6515149fe609e2788ddf164bd10 AS golang
 FROM ghcr.io/dskiff/tko:bin@sha256:e075199e765f3143387e3782328f80af2a7f73e3389097e851c7322b07e51d77 AS tko
 
-FROM ghcr.io/actions/actions-runner:latest@sha256:30a523019a27c97da3f2145252dad9478b7427a8b484a0c775f3a8605d84d35d AS base
+FROM ghcr.io/actions/actions-runner:latest@sha256:8de989a63c2dad8aeb7c44b70f86189d148f887cbd917ecbe83879df54bf6590 AS base
 
 FROM ubuntu:noble@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b AS builder
 # Grab anything we can't get via other means
