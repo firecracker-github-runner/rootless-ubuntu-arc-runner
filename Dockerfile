@@ -68,7 +68,9 @@ RUN useradd -m $USERNAME -u $UID && \
     libicu-dev \
     unzip \
     wget \
-    zstd && \
+    zstd \
+    rustc \
+    cargo && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
