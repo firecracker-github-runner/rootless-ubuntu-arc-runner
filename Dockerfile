@@ -64,8 +64,10 @@ RUN useradd -m $USERNAME -u $UID && \
     git \
     git-lfs \
     jq \
+    locales \
     lsb-release \
     libicu-dev \
+    tzdata \
     unzip \
     wget \
     zstd \
@@ -73,7 +75,16 @@ RUN useradd -m $USERNAME -u $UID && \
     cargo && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    locale-gen en_US.UTF-8 && \
+    ln -sf /usr/share/zoneinfo/UTC /etc/localtime && \
+    echo "UTC" > /etc/timezone
+
+# Set locale and timezone environment variables
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+ENV TZ=UTC
 
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
