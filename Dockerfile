@@ -75,7 +75,6 @@ RUN useradd -m $USERNAME -u $UID && \
 
 # Install rustup and latest stable Rust toolchain
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-    /root/.cargo/bin/rustup default stable && \
     cp -r /root/.cargo /home/${USERNAME}/.cargo && \
     cp -r /root/.rustup /home/${USERNAME}/.rustup && \
     chown -R ${UID}:${GID} /home/${USERNAME}/.cargo /home/${USERNAME}/.rustup
