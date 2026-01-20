@@ -85,6 +85,22 @@ RUN CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup \
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
 
+# Generate versions.yaml file
+USER root
+RUN echo "# Build Tool Versions" > ${BASE_DIR}/versions.yaml && \
+    echo "bun: $(bun --version)" >> ${BASE_DIR}/versions.yaml && \
+    echo "deno: $(deno --version | head -n1 | awk '{print $2}')" >> ${BASE_DIR}/versions.yaml && \
+    echo "go: $(go version | awk '{print $3}' | sed 's/go//')" >> ${BASE_DIR}/versions.yaml && \
+    echo "ko: $(ko version | grep 'ko version' | awk '{print $3}')" >> ${BASE_DIR}/versions.yaml && \
+    echo "node: $(${BASE_DIR}/externals/node20/bin/node --version | sed 's/v//')" >> ${BASE_DIR}/versions.yaml && \
+    echo "rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')" >> ${BASE_DIR}/versions.yaml && \
+    echo "cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')" >> ${BASE_DIR}/versions.yaml && \
+    echo "tko: $(tko version)" >> ${BASE_DIR}/versions.yaml && \
+    chown ${UID}:${GID} ${BASE_DIR}/versions.yaml && \
+    cat ${BASE_DIR}/versions.yaml
+
+USER $USERNAME
+
 WORKDIR /home/${USERNAME}
 
 ENTRYPOINT ["/bin/bash", "-c"]
