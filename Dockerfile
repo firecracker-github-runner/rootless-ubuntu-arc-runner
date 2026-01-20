@@ -44,8 +44,8 @@ ENV BASE_DIR=/home/${USERNAME}_base
 COPY --from=golang  --chown=root:0 /usr/local/go /usr/local/
 COPY --from=builder --chown=root:0 /work/bin/* ${BIN_DIR}/
 
-# Add golang + builtin node to PATH
-ENV PATH=/usr/local/go:${BASE_DIR}/externals/node20/bin:${PATH}
+# Add golang + builtin node + cargo to PATH
+ENV PATH=/usr/local/go:${BASE_DIR}/externals/node20/bin:/home/${USERNAME}/.cargo/bin:${PATH}
 
 # Setup runner
 COPY --from=base --chown=root:0 /home/runner ${BASE_DIR}
@@ -68,12 +68,17 @@ RUN useradd -m $USERNAME -u $UID && \
     libicu-dev \
     unzip \
     wget \
-    zstd \
-    rustc \
-    cargo && \
+    zstd && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install rustup and latest stable Rust toolchain
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
+    /root/.cargo/bin/rustup default stable && \
+    cp -r /root/.cargo /home/${USERNAME}/.cargo && \
+    cp -r /root/.rustup /home/${USERNAME}/.rustup && \
+    chown -R ${UID}:${GID} /home/${USERNAME}/.cargo /home/${USERNAME}/.rustup
 
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
