@@ -8,7 +8,7 @@ Includes:
 - Go
 - Ko
 - Node (using node 20 from runner externals)
-- Rust (rustc and cargo)
+- Rust (via rustup with latest stable toolchain)
 - tko (allowing rootless container building for quarkus, etc)
 
 Expects:
