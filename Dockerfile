@@ -73,16 +73,16 @@ RUN useradd -m $USERNAME -u $UID && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install rustup and latest stable Rust toolchain
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-    cp -r /root/.cargo /home/${USERNAME}/.cargo && \
-    cp -r /root/.rustup /home/${USERNAME}/.rustup && \
-    chown -R ${UID}:${GID} /home/${USERNAME}/.cargo /home/${USERNAME}/.rustup
+# Install rustup as root
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain none
 
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
 
 USER $USERNAME
+
+# Install stable Rust toolchain as runner user
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 WORKDIR /home/${USERNAME}
 
 ENTRYPOINT ["/bin/bash", "-c"]
