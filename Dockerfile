@@ -45,9 +45,9 @@ COPY --from=golang  --chown=root:0 /usr/local/go /usr/local/
 COPY --from=builder --chown=root:0 /work/bin/* ${BIN_DIR}/
 
 # Add golang + builtin node + cargo to PATH
-ENV PATH=/usr/local/go:${BASE_DIR}/externals/node20/bin:/home/${USERNAME}/.cargo/bin:${PATH}
+ENV PATH=/usr/local/go:${BASE_DIR}/externals/node20/bin:${BASE_DIR}/.cargo/bin:${PATH}
 
-# Setup runner
+# Setup runner first to get access to installdependencies.sh
 COPY --from=base --chown=root:0 /home/runner ${BASE_DIR}
 
 # Install deps
@@ -73,13 +73,18 @@ RUN useradd -m $USERNAME -u $UID && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+USER $USERNAME
+
+# Install rustup and stable Rust toolchain as runner user directly into BASE_DIR
+# NOTE: At runtime, /home/runner is mounted as a volume. Any content that needs to be
+# available in /home/runner at runtime must be installed in ${BASE_DIR} (/home/runner_base)
+# at build time. The entrypoint script copies everything from ${BASE_DIR} to /home/runner.
+RUN CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path
+
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
 
-USER $USERNAME
-
-# Install rustup and stable Rust toolchain as runner user
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 WORKDIR /home/${USERNAME}
 
 ENTRYPOINT ["/bin/bash", "-c"]
