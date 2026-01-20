@@ -86,21 +86,18 @@ RUN CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup \
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
 
 # Generate versions.yaml file
-USER root
-RUN set -e && \
-    echo "# Build Tool Versions" > ${BASE_DIR}/versions.yaml && \
-    echo "bun: $(bun --version)" >> ${BASE_DIR}/versions.yaml && \
-    echo "deno: $(deno --version | head -n1 | awk '{print $2}')" >> ${BASE_DIR}/versions.yaml && \
-    echo "go: $(go version | awk '{print $3}' | sed 's/go//')" >> ${BASE_DIR}/versions.yaml && \
-    echo "ko: $(ko version 2>&1 | grep -oP 'v\K[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || ko version 2>&1 | head -n1)" >> ${BASE_DIR}/versions.yaml && \
-    echo "node: $(${BASE_DIR}/externals/node20/bin/node --version | sed 's/v//')" >> ${BASE_DIR}/versions.yaml && \
-    echo "rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')" >> ${BASE_DIR}/versions.yaml && \
-    echo "cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')" >> ${BASE_DIR}/versions.yaml && \
-    echo "tko: $(tko version)" >> ${BASE_DIR}/versions.yaml && \
-    chown ${UID}:${GID} ${BASE_DIR}/versions.yaml && \
-    cat ${BASE_DIR}/versions.yaml
-
-USER $USERNAME
+RUN set -eo pipefail && \
+    { \
+    echo "# Build Tool Versions"; \
+    echo "bun: $(bun --version)"; \
+    echo "deno: $(deno --version | head -n1 | awk '{print $2}')"; \
+    echo "go: $(go version | awk '{print $3}' | sed 's/go//')"; \
+    echo "ko: $(ko version 2>&1 | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo 'unknown')"; \
+    echo "node: $(${BASE_DIR}/externals/node20/bin/node --version | sed 's/v//')"; \
+    echo "rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')"; \
+    echo "cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')"; \
+    echo "tko: $(tko version)"; \
+    } | tee ${BASE_DIR}/versions.yaml
 
 WORKDIR /home/${USERNAME}
 
