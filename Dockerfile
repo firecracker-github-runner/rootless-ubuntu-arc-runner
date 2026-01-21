@@ -85,12 +85,10 @@ RUN export CARGO_HOME=${BASE_DIR}/.cargo && \
     chmod -R g+r ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup && \
     find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} +
 
-USER $USERNAME
-
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
 
-# Generate versions.yaml file
+# Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
     { \
     echo '# Build Tool Versions'; \
@@ -102,7 +100,10 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \
-    } | tee ${BASE_DIR}/versions.yaml"]
+    } | tee ${BASE_DIR}/versions.yaml && \
+    chmod g+r ${BASE_DIR}/versions.yaml"]
+
+USER $USERNAME
 
 WORKDIR /home/${USERNAME}
 
