@@ -85,6 +85,21 @@ RUN export CARGO_HOME=${BASE_DIR}/.cargo && \
     chmod -R g+r ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup && \
     find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} +
 
+# Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
+RUN ["/bin/bash", "-c", "set -eo pipefail && \
+    { \
+    echo '# Build Tool Versions'; \
+    echo \"bun: $(bun --version)\"; \
+    echo \"deno: $(deno --version | head -n1 | awk '{print $2}')\"; \
+    echo \"go: $(go version | awk '{print $3}' | sed 's/go//')\"; \
+    echo \"ko: $(ko version 2>&1 | head -n1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' || echo 'unknown')\"; \
+    echo \"node: $(${BASE_DIR}/externals/node20/bin/node --version | sed 's/v//')\"; \
+    echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
+    echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
+    echo \"tko: $(tko version)\"; \
+    } | tee ${BASE_DIR}/versions.yaml && \
+    chmod g+r ${BASE_DIR}/versions.yaml"]
+
 USER $USERNAME
 
 # Inject entrypoint
