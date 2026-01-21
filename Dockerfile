@@ -72,7 +72,7 @@ RUN useradd -m $USERNAME -u $UID && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    chown -R $USERNAME:$GID ${BASE_DIR}
+    chown -R $USERNAME:$GID "${BASE_DIR}"
 
 USER $USERNAME
 
