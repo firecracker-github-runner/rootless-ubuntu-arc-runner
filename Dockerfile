@@ -83,7 +83,7 @@ RUN export CARGO_HOME=${BASE_DIR}/.cargo && \
     export RUSTUP_HOME=${BASE_DIR}/.rustup && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path && \
     chmod -R g+r ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup && \
-    find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} \;
+    find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} +
 
 USER $USERNAME
 
