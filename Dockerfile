@@ -73,14 +73,19 @@ RUN useradd -m $USERNAME -u $UID && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-USER $USERNAME
-
-# Install rustup and stable Rust toolchain as runner user directly into BASE_DIR
+# Install rustup and stable Rust toolchain as root into BASE_DIR
 # NOTE: At runtime, /home/runner is mounted as a volume. Any content that needs to be
 # available in /home/runner at runtime must be installed in ${BASE_DIR} (/home/runner_base)
 # at build time. The entrypoint script copies everything from ${BASE_DIR} to /home/runner.
-RUN CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path
+# Install as root with root:0 ownership and group read permissions so the runner user
+# (member of group 0) can read from ${BASE_DIR} at runtime.
+RUN export CARGO_HOME=${BASE_DIR}/.cargo && \
+    export RUSTUP_HOME=${BASE_DIR}/.rustup && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --no-modify-path && \
+    chmod -R g+r ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup && \
+    find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} +
+
+USER $USERNAME
 
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
