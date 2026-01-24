@@ -57,6 +57,7 @@ RUN useradd -m $USERNAME -u $UID && \
     apt-get install -y --no-install-recommends \
     g++ \
     libfreetype6-dev \
+    libssl-dev \
     musl-tools \
     zlib1g-dev \
     ca-certificates \
