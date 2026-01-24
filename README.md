@@ -6,6 +6,7 @@ Includes:
 - Bun
 - Deno
 - Go
+- Java (OpenJDK 21 JRE)
 - Ko
 - Node (using node 20 from runner externals)
 - Rust (via rustup with latest stable toolchain)
