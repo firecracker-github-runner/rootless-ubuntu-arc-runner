@@ -69,7 +69,8 @@ RUN useradd -m $USERNAME -u $UID && \
     pkg-config \
     unzip \
     wget \
-    zstd && \
+    zstd \
+    openjdk-21-jre-headless && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -93,6 +94,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"bun: $(bun --version)\"; \
     echo \"deno: $(deno --version | head -n1 | awk '{print $2}')\"; \
     echo \"go: $(go version | awk '{print $3}' | sed 's/go//')\"; \
+    echo \"java: $(java -version 2>&1 | head -n1 | awk -F'\"' '{print $2}')\"; \
     echo \"ko: $(ko version 2>&1 | head -n1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' || echo 'unknown')\"; \
     echo \"node: $(${BASE_DIR}/externals/node20/bin/node --version | sed 's/v//')\"; \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
