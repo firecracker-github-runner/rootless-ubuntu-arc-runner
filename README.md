@@ -5,6 +5,7 @@ A minimal ubuntu based Github runner.
 Includes:
 - Bun
 - Deno
+- ffmpeg (with libavcodec)
 - Go
 - Java (OpenJDK 21 JRE)
 - Ko

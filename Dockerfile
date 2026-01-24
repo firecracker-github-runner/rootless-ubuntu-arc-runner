@@ -71,7 +71,9 @@ RUN useradd -m $USERNAME -u $UID && \
     unzip \
     wget \
     zstd \
-    openjdk-21-jre-headless && \
+    openjdk-21-jre-headless \
+    ffmpeg \
+    libavcodec-dev && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -101,6 +103,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \
+    echo \"ffmpeg: $(ffmpeg -version 2>&1 | head -n1 | awk '{print $3}')\"; \
     } | tee ${BASE_DIR}/versions.yaml && \
     chmod g+r ${BASE_DIR}/versions.yaml"]
 
