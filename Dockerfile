@@ -66,6 +66,7 @@ RUN useradd -m $USERNAME -u $UID && \
     jq \
     lsb-release \
     libicu-dev \
+    pkg-config \
     unzip \
     wget \
     zstd && \
