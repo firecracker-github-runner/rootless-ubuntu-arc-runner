@@ -70,6 +70,7 @@ RUN useradd -m $USERNAME -u $UID && \
     pkg-config \
     unzip \
     wget \
+    xz-utils \
     zstd \
     openjdk-21-jre-headless && \
     ${BASE_DIR}/bin/installdependencies.sh && \
