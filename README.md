@@ -8,6 +8,7 @@ Includes:
 - Go
 - Java (OpenJDK 21 JRE)
 - Ko
+- libclang (for building Rust projects with C FFI bindings, e.g., libavcodec)
 - Node (using node 20 from runner externals)
 - Rust (via rustup with latest stable toolchain)
 - tko (allowing rootless container building for quarkus, etc)
