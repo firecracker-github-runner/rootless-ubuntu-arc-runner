@@ -72,7 +72,8 @@ RUN useradd -m $USERNAME -u $UID && \
     wget \
     xz-utils \
     zstd \
-    openjdk-21-jre-headless && \
+    openjdk-21-jre-headless \
+    libclang-dev && \
     ${BASE_DIR}/bin/installdependencies.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
