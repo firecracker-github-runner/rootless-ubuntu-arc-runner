@@ -96,13 +96,6 @@ ENV FFMPEG_PREFIX=/opt/ffmpeg
 ENV FFMPEG_VERSION=8.0
 ENV PATH="${FFMPEG_PREFIX}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${FFMPEG_PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-    
-# curl  \
-#   | tar -xJ --strip-components=1 -C "$FFMPEG_PREFIX"
-# sed -i "s|^prefix=.*|prefix=$FFMPEG_PREFIX|" "$FFMPEG_PREFIX"/lib/pkgconfig/*.pc
-# PKG_CONFIG_PATH="$FFMPEG_PREFIX/lib/pkgconfig" pkg-config --modversion libavformat
-# echo "$FFMPEG_PREFIX/bin" >> "$GITHUB_PATH"
-
 
 RUN mkdir -p "$FFMPEG_PREFIX" && \
     curl -sL "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n${FFMPEG_VERSION}-latest-linux64-gpl-shared-${FFMPEG_VERSION}.tar.xz" \
