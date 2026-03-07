@@ -90,6 +90,19 @@ RUN export CARGO_HOME=${BASE_DIR}/.cargo && \
     chmod -R g+r ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup && \
     find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} +
 
+# Inject a copy of ffmpeg
+ENV FFMPEG_PREFIX=/opt/ffmpeg
+ENV FFMPEG_VERSION=8.0
+ENV PATH="${FFMPEG_PREFIX}/bin:${PATH}"
+ENV LD_LIBRARY_PATH="${FFMPEG_PREFIX}/lib"
+
+RUN mkdir -p "$FFMPEG_PREFIX" && \
+    curl -sL "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n${FFMPEG_VERSION}-latest-linux64-gpl-shared-${FFMPEG_VERSION}.tar.xz" \
+    | tar -xJC "$FFMPEG_PREFIX" --strip-components=1 --no-same-owner && \
+    sed -i "s|^prefix=.*|prefix=$FFMPEG_PREFIX|" "$FFMPEG_PREFIX"/lib/pkgconfig/*.pc && \
+    chmod -R g+r "$FFMPEG_PREFIX" && \
+    find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
+
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
     { \
@@ -103,6 +116,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \
+    echo \"ffmpeg: $(pkg-config --modversion --static libavformat)\"; \
     } | tee ${BASE_DIR}/versions.yaml && \
     chmod g+r ${BASE_DIR}/versions.yaml"]
 
