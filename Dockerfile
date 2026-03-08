@@ -39,13 +39,11 @@ ENV UID=1001
 ENV GID=0
 ENV USERNAME="runner"
 ENV BASE_DIR=/home/${USERNAME}_base
+ENV RUNTIME_HOME_DIR=/home/${USERNAME}
 
 # Add deps from images
 COPY --from=golang  --chown=root:0 /usr/local/go /usr/local/
 COPY --from=builder --chown=root:0 /work/bin/* ${BIN_DIR}/
-
-# Add golang + builtin node + cargo to PATH
-ENV PATH=/usr/local/go:${BASE_DIR}/externals/node20/bin:${BASE_DIR}/.cargo/bin:${PATH}
 
 # Setup runner first to get access to installdependencies.sh
 COPY --from=base --chown=root:0 /home/runner ${BASE_DIR}
@@ -103,6 +101,9 @@ RUN mkdir -p "$FFMPEG_PREFIX" && \
     chmod -R g+r "$FFMPEG_PREFIX" && \
     find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
 
+# Add runtime paths for golang + builtin node + cargo to PATH
+ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${PATH}
+
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
     { \
@@ -125,7 +126,7 @@ USER $USERNAME
 # Inject entrypoint
 COPY --chown=root:0 ./entrypoint.sh ${BASE_DIR}/
 
-WORKDIR /home/${USERNAME}
+WORKDIR ${RUNTIME_HOME_DIR}
 
 ENTRYPOINT ["/bin/bash", "-c"]
 CMD ["/home/runner_base/entrypoint.sh"]
