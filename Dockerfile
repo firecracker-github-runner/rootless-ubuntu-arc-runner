@@ -60,6 +60,9 @@ RUN useradd -m $USERNAME -u $UID && \
     zlib1g-dev \
     ca-certificates \
     curl \
+    fontconfig \
+    fonts-liberation \
+    fonts-urw-base35 \
     git \
     git-lfs \
     jq \
