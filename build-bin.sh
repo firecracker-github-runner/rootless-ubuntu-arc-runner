@@ -47,9 +47,9 @@ function fetch_zig {
   tar -xzf ${tmp_dir}/${lib_tarball} -C ${tmp_dir}/lib
 
   rm -rf ${destination}
-  mkdir -p ${destination}
+  mkdir -p ${destination} ${destination}/lib
   cp ${tmp_dir}/zig/package/bin/zig ${destination}/zig
-  cp -r ${tmp_dir}/lib/package ${destination}/lib
+  cp -r ${tmp_dir}/lib/package/. ${destination}/lib
   rm -rf ${tmp_dir}
 }
 
