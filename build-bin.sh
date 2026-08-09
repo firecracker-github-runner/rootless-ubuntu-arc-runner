@@ -2,19 +2,12 @@
 
 set -eoux pipefail
 
-function github_api {
-  curl -sSLf \
-    -H 'Accept: application/vnd.github+json' \
-    -H 'User-Agent: rootless-ubuntu-arc-runner-build' \
-    "$1"
-}
-
 function fetch {
   local package=$1
   local filename_prefix=$2
 
-  local releases_api=https://api.github.com/repos/${package}/releases/latest
-  local tag=$(github_api ${releases_api} | jq -er '.tag_name')
+  local releases_url=https://github.com/${package}/releases/latest
+  local tag=$(curl -sSLfI -o /dev/null -w '%{url_effective}' ${releases_url} | awk -F/ '{print $NF}')
   local artifact=${filename_prefix}_${tag:1}_linux_x86_64
   local url=https://github.com/${package}/releases/download/${tag}/${artifact}.tar.gz
 
@@ -28,8 +21,8 @@ function fetch {
 }
 
 function fetch_zig {
-  local releases_api=https://api.github.com/repos/ziglang/zig/releases/latest
-  local tag=$(github_api ${releases_api} | jq -er '.tag_name')
+  local releases_url=https://github.com/ziglang/zig/releases/latest
+  local tag=$(curl -sSLfI -o /dev/null -w '%{url_effective}' ${releases_url} | awk -F/ '{print $NF}')
   local artifact=zig-x86_64-linux-${tag}
   local archive=${artifact}.tar.xz
   local signature=${archive}.minisig
