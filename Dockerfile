@@ -9,7 +9,7 @@ FROM ubuntu:noble@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e8
 # Grab anything we can't get via other means
 
 # apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl jq python3-pip
+RUN apt-get update && apt-get install -y curl python3-pip
 
 ENV WORKDIR=/work
 ENV BIN_OUT=/work/bin
