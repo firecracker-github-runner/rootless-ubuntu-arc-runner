@@ -9,17 +9,20 @@ FROM ubuntu:noble@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e8
 # Grab anything we can't get via other means
 
 # apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl minisign xz-utils
+RUN apt-get update && apt-get install -y curl
 
 ENV WORKDIR=/work
 ENV BIN_OUT=/work/bin
 ENV GO_DIR=/work/go
+ENV NODE20_DIR=/opt/node20
 ENV OPT_OUT=/work/opt
+ENV PATH=${NODE20_DIR}/bin:${PATH}
 
 RUN mkdir -p ${WORKDIR} && \
     mkdir -p ${BIN_OUT} ${OPT_OUT}
 WORKDIR ${WORKDIR}
 
+COPY --from=base    --chown=root:0 /home/runner/externals/node20 ${NODE20_DIR}
 COPY --from=bun     --chown=root:0 /usr/local/bin/bun /usr/local/bin/bunx ${BIN_OUT}/
 COPY --from=deno    --chown=root:0 /deno ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
@@ -37,6 +40,7 @@ ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
 
 ENV BIN_DIR=/usr/bin
 ENV ZIG_PREFIX=/opt/zig
+ENV ZIG_LIB_DIR=${ZIG_PREFIX}/lib
 ENV UID=1001
 ENV GID=0
 ENV USERNAME="runner"
