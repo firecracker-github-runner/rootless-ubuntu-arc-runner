@@ -7,7 +7,7 @@ This repository contains a minimal Ubuntu-based GitHub Actions runner Docker ima
 **Key Technologies:**
 - Base: Ubuntu Noble (24.04 LTS)
 - GitHub Actions runner from `ghcr.io/actions/actions-runner:latest`
-- Languages: Go, Node.js 20, Rust, Bun, Deno
+- Languages: Go, Node.js 20, Rust, Bun, Deno, Zig
 - Build tools: Ko (for Go container builds), tko (for rootless container building)
 - Container: Docker (rootless compatible)
 
@@ -16,7 +16,7 @@ This repository contains a minimal Ubuntu-based GitHub Actions runner Docker ima
 **Multi-stage Dockerfile Architecture:**
 The Dockerfile uses a multi-stage build pattern:
 1. Binary extraction stages (bun, deno, golang, tko) - extract binaries from official images
-2. Builder stage - downloads and builds additional binaries (ko)
+2. Builder stage - downloads and prepares additional binaries (ko, zig)
 3. Final Ubuntu-based stage - assembles the runner with all tools
 
 **Key Design Decisions:**
@@ -34,7 +34,7 @@ The Dockerfile uses a multi-stage build pattern:
 │       ├── ci.yaml          # CI workflow: builds Docker image on PRs and main branch
 │       └── publish.yaml     # Publishes image to ghcr.io on main branch
 ├── Dockerfile               # Multi-stage Docker build definition
-├── build-bin.sh            # Script to download ko binary from GitHub releases
+├── build-bin.sh            # Script to download additional build binaries
 ├── entrypoint.sh           # Container entrypoint that copies runner_base to runner
 ├── renovate.json           # Renovate configuration for dependency updates
 └── README.md               # Project documentation
@@ -49,7 +49,7 @@ docker build -t rootless-ubuntu-arc-runner .
 
 The build process:
 1. Extracts binaries from official images (bun, deno, go, tko)
-2. Runs `build-bin.sh` to download ko binary
+2. Runs `build-bin.sh` to download ko and zig
 3. Assembles final Ubuntu image with all tools and dependencies
 4. Installs Rust toolchain as runner user
 5. Sets up GitHub Actions runner from base image
@@ -101,6 +101,7 @@ docker run --rm \
 All image references use SHA256 digests for security and reproducibility:
 - Bun, Deno, Golang, TKO: Extracted from official images
 - Ko: Downloaded from GitHub releases (latest tag)
+- Zig: Downloaded from community mirrors and verified with minisign
 - Actions runner: From `ghcr.io/actions/actions-runner:latest`
 
 **Renovate:**
