@@ -12,6 +12,7 @@ Includes:
 - Node (using node 20 from runner externals)
 - Rust (via rustup with latest stable toolchain)
 - tko (allowing rootless container building for quarkus, etc)
+- Zig
 
 Expects:
 - /tmp and /home/runner to be be mounted as volumes (allowing `readOnlyRootFilesystem: true` on the runner container)

@@ -9,11 +9,13 @@ FROM ubuntu:noble@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e8
 # Grab anything we can't get via other means
 
 # apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl jq
+RUN apt-get update && apt-get install -y curl python3-pip
 
 ENV WORKDIR=/work
 ENV BIN_OUT=/work/bin
 ENV GO_DIR=/work/go
+ENV ZIG_OUT=/work/zig
+ARG ZIG_VERSION=0.15.2
 
 RUN mkdir -p ${WORKDIR} && \
     mkdir -p ${BIN_OUT}
@@ -26,6 +28,7 @@ COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
 COPY --chown=root:0 build-bin.sh ${WORKDIR}/
 RUN cd ${WORKDIR} && \
     ./build-bin.sh
+RUN python3 -m pip install --no-cache-dir --no-deps --target ${ZIG_OUT} ziglang==${ZIG_VERSION}
 
 FROM ubuntu:noble@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
 # see: https://github.com/actions/runner/blob/main/images/Dockerfile
@@ -40,10 +43,12 @@ ENV GID=0
 ENV USERNAME="runner"
 ENV BASE_DIR=/home/${USERNAME}_base
 ENV RUNTIME_HOME_DIR=/home/${USERNAME}
+ENV ZIG_DIR=/usr/local/zig
 
 # Add deps from images
 COPY --from=golang  --chown=root:0 /usr/local/go /usr/local/
 COPY --from=builder --chown=root:0 /work/bin/* ${BIN_DIR}/
+COPY --from=builder --chown=root:0 /work/zig/ziglang ${ZIG_DIR}
 
 # Setup runner first to get access to installdependencies.sh
 COPY --from=base --chown=root:0 /home/runner ${BASE_DIR}
@@ -127,7 +132,7 @@ RUN mkdir -p "$FFMPEG_PREFIX" && \
     find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
 
 # Add runtime paths for golang + builtin node + cargo to PATH
-ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${PATH}
+ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${ZIG_DIR}:${PATH}
 
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
@@ -142,6 +147,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \
+    echo \"zig: $(zig version)\"; \
     echo \"ffmpeg: $(pkg-config --modversion --static libavformat)\"; \
     } | tee ${BASE_DIR}/versions.yaml && \
     chmod g+r ${BASE_DIR}/versions.yaml"]
@@ -155,4 +161,3 @@ WORKDIR ${RUNTIME_HOME_DIR}
 
 ENTRYPOINT ["/bin/bash", "-c"]
 CMD ["/home/runner_base/entrypoint.sh"]
-
