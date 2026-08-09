@@ -16,6 +16,9 @@ ENV BIN_OUT=/work/bin
 ENV GO_DIR=/work/go
 ENV NODE20_DIR=/opt/node20
 ENV OPT_OUT=/work/opt
+ENV ZIG_VERSION=0.16.0
+ENV ZIG_LINUX_X64_INTEGRITY=sha512-zVSGKmIZb5w+ot3eDdoF7GzvICN1e6mwGIAgavDiQR0stXnJu9UgOMppcIKqP5fG5ecsH6jsIf9rThd3ZI/dlQ==
+ENV ZIG_LIB_INTEGRITY=sha512-btxgqPJy93rwlcypaMHLLGjvtj/t1km+KUKjlCCxKV+UpayeI1v6ybXt4/jFI3ufDKoLe9GLKTpsX8bavMEygA==
 ENV PATH=${NODE20_DIR}/bin:${PATH}
 
 RUN mkdir -p ${WORKDIR} && \

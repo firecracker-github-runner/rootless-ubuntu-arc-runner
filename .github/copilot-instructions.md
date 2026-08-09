@@ -101,7 +101,7 @@ docker run --rm \
 All image references use SHA256 digests for security and reproducibility:
 - Bun, Deno, Golang, TKO: Extracted from official images
 - Ko: Downloaded from GitHub releases (latest tag)
-- Zig: Downloaded from npm-distributed Zig toolchain packages
+- Zig: Downloaded from pinned npm-distributed Zig toolchain packages with integrity verification
 - Actions runner: From `ghcr.io/actions/actions-runner:latest`
 
 **Renovate:**
