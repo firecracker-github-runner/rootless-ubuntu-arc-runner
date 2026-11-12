@@ -5,7 +5,7 @@ FROM ghcr.io/dskiff/tko:bin@sha256:22d093ac97100fc318e74724ecdd1757ebdc46f5d50b4
 
 FROM ghcr.io/actions/actions-runner:latest@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300 AS base
 
-FROM ubuntu:noble@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852 AS builder
+FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5 AS builder
 # Grab anything we can't get via other means
 
 # apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
@@ -27,7 +27,7 @@ COPY --chown=root:0 build-bin.sh ${WORKDIR}/
 RUN cd ${WORKDIR} && \
     ./build-bin.sh
 
-FROM ubuntu:noble@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 # see: https://github.com/actions/runner/blob/main/images/Dockerfile
 
 ENV DEBIAN_FRONTEND=noninteractive
