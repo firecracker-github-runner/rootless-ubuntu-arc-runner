@@ -2,6 +2,7 @@ FROM oven/bun:1-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5
 FROM denoland/deno:bin@sha256:b507583d3c68ba69f3ed2ce5969ae5b8b70f43421c781279c7aea06435263543 AS deno
 FROM golang:latest@sha256:ec47ea3725fea0cc88f6de94919aef19f40f12fc1ec0e2d1b3426dbf15ecca04 AS golang
 FROM ghcr.io/dskiff/tko:bin@sha256:22d093ac97100fc318e74724ecdd1757ebdc46f5d50b406302cb49ceb354f848 AS tko
+FROM ghcr.io/astral-sh/uv:latest@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
 
 FROM ghcr.io/actions/actions-runner:latest@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300 AS base
 
@@ -22,6 +23,7 @@ WORKDIR ${WORKDIR}
 COPY --from=bun     --chown=root:0 /usr/local/bin/bun /usr/local/bin/bunx ${BIN_OUT}/
 COPY --from=deno    --chown=root:0 /deno ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
+COPY --from=uv      --chown=root:0 /uv /uvx ${BIN_OUT}/
 
 COPY --chown=root:0 build-bin.sh ${WORKDIR}/
 RUN cd ${WORKDIR} && \
@@ -112,6 +114,22 @@ RUN export CARGO_HOME=${BASE_DIR}/.cargo && \
     chmod -R g+r ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup && \
     find ${BASE_DIR}/.cargo ${BASE_DIR}/.rustup -type d -exec chmod g+x {} +
 
+# Install the latest stable Python via uv into a system location. Unlike rustup, this
+# lives outside ${BASE_DIR} so it isn't copied into /home/runner on every start; it is
+# read-only at runtime, so the stdlib is bytecode-compiled up front.
+# uv links python3.x into /usr/local/bin; python/python3 are linked by hand rather than via
+# `--default`, which is still a preview feature. UV_PYTHON_INSTALL_DIR is only set for this
+# step: at runtime uv finds this interpreter on PATH, and `uv python install <version>`
+# still writes to its default (writable) dir under /home/runner.
+ARG PYTHON_INSTALL_DIR=/opt/python
+RUN export UV_PYTHON_INSTALL_DIR=${PYTHON_INSTALL_DIR} UV_PYTHON_BIN_DIR=/usr/local/bin && \
+    uv python install --compile-bytecode --no-cache && \
+    python_bin=$(uv python find --managed-python) && \
+    ln -s "${python_bin}" /usr/local/bin/python3 && \
+    ln -s "${python_bin}" /usr/local/bin/python && \
+    chmod -R g+r ${PYTHON_INSTALL_DIR} && \
+    find ${PYTHON_INSTALL_DIR} -type d -exec chmod g+x {} +
+
 # Inject a copy of ffmpeg
 ENV FFMPEG_PREFIX=/opt/ffmpeg
 ENV FFMPEG_VERSION=8.1
@@ -126,8 +144,8 @@ RUN mkdir -p "$FFMPEG_PREFIX" && \
     chmod -R g+r "$FFMPEG_PREFIX" && \
     find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
 
-# Add runtime paths for golang + builtin node + cargo to PATH
-ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${PATH}
+# Add runtime paths for golang + builtin node + cargo + user-local bin (uv tools/pythons) to PATH
+ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
 
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
@@ -142,6 +160,8 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \
+    echo \"uv: $(uv --version | awk '{print $2}')\"; \
+    echo \"python: $(python3 --version | awk '{print $2}')\"; \
     echo \"ffmpeg: $(pkg-config --modversion --static libavformat)\"; \
     } | tee ${BASE_DIR}/versions.yaml && \
     chmod g+r ${BASE_DIR}/versions.yaml"]
