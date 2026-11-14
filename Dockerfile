@@ -1,16 +1,15 @@
 FROM oven/bun:1-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5af1db187d9a4 AS bun
 FROM denoland/deno:bin@sha256:b507583d3c68ba69f3ed2ce5969ae5b8b70f43421c781279c7aea06435263543 AS deno
 FROM golang:latest@sha256:ec47ea3725fea0cc88f6de94919aef19f40f12fc1ec0e2d1b3426dbf15ecca04 AS golang
+# Pin a release tag: ko's `latest` tag is rebuilt from every commit on its main branch.
+FROM ghcr.io/ko-build/ko:v0.19.1@sha256:504badc509e58f193a6b9f5527ae8885f8d61b38187b2d9580e15c34d027a082 AS ko
 FROM ghcr.io/dskiff/tko:bin@sha256:22d093ac97100fc318e74724ecdd1757ebdc46f5d50b406302cb49ceb354f848 AS tko
 FROM ghcr.io/astral-sh/uv:latest@sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85 AS uv
 
 FROM ghcr.io/actions/actions-runner:latest@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300 AS base
 
 FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5 AS builder
-# Grab anything we can't get via other means
-
-# apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl
+# Collect standalone binaries in one directory so they land in the final image as a single layer
 
 ENV WORKDIR=/work
 ENV BIN_OUT=/work/bin
@@ -22,12 +21,9 @@ WORKDIR ${WORKDIR}
 
 COPY --from=bun     --chown=root:0 /usr/local/bin/bun /usr/local/bin/bunx ${BIN_OUT}/
 COPY --from=deno    --chown=root:0 /deno ${BIN_OUT}/
+COPY --from=ko      --chown=root:0 /ko-app/ko ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
 COPY --from=uv      --chown=root:0 /uv /uvx ${BIN_OUT}/
-
-COPY --chown=root:0 build-bin.sh ${WORKDIR}/
-RUN cd ${WORKDIR} && \
-    ./build-bin.sh
 
 FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 # see: https://github.com/actions/runner/blob/main/images/Dockerfile
