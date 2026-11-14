@@ -16,8 +16,8 @@ This repository contains a minimal Ubuntu-based GitHub Actions runner Docker ima
 
 **Multi-stage Dockerfile Architecture:**
 The Dockerfile uses a multi-stage build pattern:
-1. Binary extraction stages (bun, deno, golang, tko, uv) - extract binaries from official images
-2. Builder stage - downloads and builds additional binaries (ko)
+1. Binary extraction stages (bun, deno, golang, ko, tko, uv) - extract binaries from official images
+2. Builder stage - collects the standalone binaries into one directory
 3. Final Ubuntu-based stage - assembles the runner with all tools
 
 **Key Design Decisions:**
@@ -36,7 +36,6 @@ The Dockerfile uses a multi-stage build pattern:
 │       ├── ci.yaml          # CI workflow: builds Docker image on PRs and main branch
 │       └── publish.yaml     # Publishes image to ghcr.io on main branch
 ├── Dockerfile               # Multi-stage Docker build definition
-├── build-bin.sh            # Script to download ko binary from GitHub releases
 ├── entrypoint.sh           # Container entrypoint that copies runner_base to runner
 ├── renovate.json           # Renovate configuration for dependency updates
 └── README.md               # Project documentation
@@ -50,11 +49,10 @@ docker build -t rootless-ubuntu-arc-runner .
 ```
 
 The build process:
-1. Extracts binaries from official images (bun, deno, go, tko, uv)
-2. Runs `build-bin.sh` to download ko binary
-3. Assembles final Ubuntu image with all tools and dependencies
-4. Installs Rust toolchain and the latest stable Python (via uv)
-5. Sets up GitHub Actions runner from base image
+1. Extracts binaries from official images (bun, deno, go, ko, tko, uv)
+2. Assembles final Ubuntu image with all tools and dependencies
+3. Installs Rust toolchain and the latest stable Python (via uv)
+4. Sets up GitHub Actions runner from base image
 
 **CI Build Process:**
 - CI runs automatically on pull requests and main branch pushes
@@ -101,9 +99,9 @@ docker run --rm \
 
 **Pinned Dependencies:**
 All image references use SHA256 digests for security and reproducibility:
-- Bun, Deno, Golang, TKO, uv: Extracted from official images
+- Bun, Deno, Golang, Ko, TKO, uv: Extracted from official images
+- Ko: pinned to a release tag of `ghcr.io/ko-build/ko` (its `latest` tag tracks ko's main branch, not releases); the binary lives at `/ko-app/ko`
 - Python: latest stable known to the pinned uv release at build time
-- Ko: Downloaded from GitHub releases (latest tag)
 - Actions runner: From `ghcr.io/actions/actions-runner:latest`
 
 **Renovate:**
@@ -115,8 +113,8 @@ Automated dependency updates configured in `renovate.json`:
 ## Common Tasks
 
 **Adding a new binary/tool:**
-1. If available as a Docker image, add a new stage in Dockerfile and COPY from it
-2. If downloadable, update `build-bin.sh` with fetch logic
+1. If available as a Docker image, add a new stage in Dockerfile and COPY from it into `${BIN_OUT}` in the builder stage
+2. If only downloadable, add a pinned, checksummed fetch step to the builder stage
 3. Ensure binary is copied to `${BIN_DIR}` in final stage
 4. Test the build completes successfully
 
@@ -146,7 +144,6 @@ docker inspect <image> | grep -i digest
 ## Troubleshooting
 
 **Build failures:**
-- Check network connectivity for downloads in `build-bin.sh`
 - Verify all image digests are valid and accessible
 - Review apt package availability in Ubuntu Noble
 
