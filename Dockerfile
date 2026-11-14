@@ -10,11 +10,12 @@ FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca
 # Grab anything we can't get via other means
 
 # apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl jq
+RUN apt-get update && apt-get install -y curl jq minisign xz-utils
 
 ENV WORKDIR=/work
 ENV BIN_OUT=/work/bin
 ENV GO_DIR=/work/go
+ENV ZIG_OUT=/work/zig
 
 RUN mkdir -p ${WORKDIR} && \
     mkdir -p ${BIN_OUT}
@@ -25,6 +26,8 @@ COPY --from=deno    --chown=root:0 /deno ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
 COPY --from=uv      --chown=root:0 /uv /uvx ${BIN_OUT}/
 
+# Zig release to install, e.g. 0.17.1 (see https://ziglang.org/download/). Empty = latest stable.
+ARG ZIG_VERSION
 COPY --chown=root:0 build-bin.sh ${WORKDIR}/
 RUN cd ${WORKDIR} && \
     ./build-bin.sh
@@ -130,6 +133,13 @@ RUN export UV_PYTHON_INSTALL_DIR=${PYTHON_INSTALL_DIR} UV_PYTHON_BIN_DIR=/usr/lo
     chmod -R g+r ${PYTHON_INSTALL_DIR} && \
     find ${PYTHON_INSTALL_DIR} -type d -exec chmod g+x {} +
 
+# Zig: the official release tarball, fetched from the community mirrors and minisign-verified by
+# build-bin.sh in the builder stage. It is symlinked (not copied) onto PATH because zig finds its
+# lib/ dir relative to its real location. Like Python it is read-only at runtime; zig's global
+# cache defaults to ~/.cache/zig, which is on the writable /home/runner volume.
+COPY --from=builder --chown=root:0 /work/zig /opt/zig
+RUN ln -s /opt/zig/zig /usr/local/bin/zig
+
 # Inject a copy of ffmpeg
 ENV FFMPEG_PREFIX=/opt/ffmpeg
 ENV FFMPEG_VERSION=8.1
@@ -162,6 +172,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"tko: $(tko version)\"; \
     echo \"uv: $(uv --version | awk '{print $2}')\"; \
     echo \"python: $(python3 --version | awk '{print $2}')\"; \
+    echo \"zig: $(zig version)\"; \
     echo \"ffmpeg: $(pkg-config --modversion --static libavformat)\"; \
     } | tee ${BASE_DIR}/versions.yaml && \
     chmod g+r ${BASE_DIR}/versions.yaml"]

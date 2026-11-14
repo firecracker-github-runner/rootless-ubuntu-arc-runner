@@ -20,4 +20,42 @@ function fetch {
   mv ${filename_prefix}/${filename_prefix} ${BIN_OUT}/${filename_prefix}
 }
 
+# Zig: the official release tarball (latest stable unless ZIG_VERSION is set), extracted to $1.
+# Follows https://ziglang.org/download/community-mirrors/ : ziglang.org asks automated downloads
+# to use the community mirrors (shuffled, with ziglang.org itself as the last resort), and every
+# download must pass minisign verification against the ZSF key from https://ziglang.org/download/
+# with the signature's "file:" trusted comment matching the requested tarball (no downgrades).
+ZIG_PUBKEY=RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U
+
+function fetch_zig {
+  local out=$1
+  local version tarball file mirrors url comment
+
+  curl -sSLf -o zig-index.json https://ziglang.org/download/index.json
+  version=${ZIG_VERSION:-$(jq -r 'keys[] | select(. != "master")' zig-index.json | sort -V | tail -n1)}
+  tarball=$(jq -er --arg v "${version}" --arg t "$(uname -m)-linux" '.[$v][$t].tarball' zig-index.json)
+  rm zig-index.json
+  file=${tarball##*/}
+  mirrors=$(curl -sSLf https://ziglang.org/download/community-mirrors.txt | shuf)
+
+  for url in ${mirrors} ${tarball%/*}; do
+    rm -f "${file}" "${file}.minisig"
+    if curl -sSLf --connect-timeout 10 --speed-limit 102400 --speed-time 30 \
+          -o "${file}" "${url}/${file}?source=docker-image-build" &&
+       curl -sSLf --connect-timeout 10 --max-time 30 \
+          -o "${file}.minisig" "${url}/${file}.minisig?source=docker-image-build" &&
+       comment=$(minisign -V -Q -P "${ZIG_PUBKEY}" -m "${file}") &&
+       grep -Fxq "file:${file}" <<<"${comment//$'\t'/$'\n'}"; then
+      mkdir -p "${out}"
+      tar -xJf "${file}" -C "${out}" --strip-components=1 --no-same-owner
+      rm -f "${file}" "${file}.minisig"
+      return 0
+    fi
+  done
+
+  echo "failed to fetch a verified ${file} from any mirror or ziglang.org" >&2
+  return 1
+}
+
 fetch "ko-build/ko" "ko"
+fetch_zig "${ZIG_OUT}"

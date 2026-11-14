@@ -14,6 +14,7 @@ Includes:
 - Rust (via rustup with latest stable toolchain)
 - tko (allowing rootless container building for quarkus, etc)
 - uv / uvx
+- Zig (latest stable official release in /opt/zig, `zig` on PATH; downloaded from the [community mirrors](https://ziglang.org/download/community-mirrors/) and minisign-verified. Pin a release with the `ZIG_VERSION` build arg)
 
 Expects:
 - /tmp and /home/runner to be be mounted as volumes (allowing `readOnlyRootFilesystem: true` on the runner container)
