@@ -10,7 +10,7 @@ FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca
 # Grab anything we can't get via other means
 
 # apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y curl jq
+RUN apt-get update && apt-get install -y curl
 
 ENV WORKDIR=/work
 ENV BIN_OUT=/work/bin
