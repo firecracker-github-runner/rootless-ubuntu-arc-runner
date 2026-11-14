@@ -9,7 +9,7 @@ Includes:
 - Java (OpenJDK 21 JRE)
 - Ko
 - libclang (for building Rust projects with C FFI bindings, e.g., libavcodec)
-- Node (using node 20 from runner externals)
+- Node 24 (from the runner's `externals/node24`, the same Node the runner uses for JavaScript actions)
 - Python (latest stable, installed via uv into /opt/python; `python`/`python3` on PATH)
 - Rust (via rustup with latest stable toolchain)
 - tko (allowing rootless container building for quarkus, etc)

@@ -7,7 +7,7 @@ This repository contains a minimal Ubuntu-based GitHub Actions runner Docker ima
 **Key Technologies:**
 - Base: Ubuntu Noble (24.04 LTS)
 - GitHub Actions runner from `ghcr.io/actions/actions-runner:latest`
-- Languages: Go, Node.js 20, Rust, Python, Bun, Deno
+- Languages: Go, Node.js 24, Rust, Python, Bun, Deno
 - Package/toolchain managers: uv (also manages the bundled Python), rustup
 - Build tools: Ko (for Go container builds), tko (for rootless container building)
 - Container: Docker (rootless compatible)
@@ -135,7 +135,7 @@ docker inspect <image> | grep -i digest
 
 1. **Always test Docker builds** after making changes - run `docker build .` locally
 2. **Preserve digest pinning** - use SHA256 digests for all image references
-3. **PATH considerations** - PATH includes Go, Node, Cargo and `/home/runner/.local/bin` (uv tools / uv-installed Pythons); the bundled Python is linked into `/usr/local/bin`
+3. **PATH considerations** - PATH includes Go, Node (the runner's `externals/node24`), Cargo and `/home/runner/.local/bin` (uv tools / uv-installed Pythons); the bundled Python is linked into `/usr/local/bin`
 4. **Volume mounts** - Remember that `/home/runner` is mounted at runtime, so build-time content must go in `/home/runner_base`
 5. **Rootless compatibility** - Avoid requiring root privileges for runtime operations
 6. **No removal of existing tools** - This image is used in production; don't remove tools without explicit requirement

@@ -141,7 +141,7 @@ RUN mkdir -p "$FFMPEG_PREFIX" && \
     find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
 
 # Add runtime paths for golang + builtin node + cargo + user-local bin (uv tools/pythons) to PATH
-ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
+ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node24/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
 
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
@@ -152,7 +152,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"go: $(go version | awk '{print $3}' | sed 's/go//')\"; \
     echo \"java: $(java -version 2>&1 | head -n1 | awk -F'\"' '{print $2}' || echo 'unknown')\"; \
     echo \"ko: $(ko version 2>&1 | head -n1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' || echo 'unknown')\"; \
-    echo \"node: $(${BASE_DIR}/externals/node20/bin/node --version | sed 's/v//')\"; \
+    echo \"node: $(${BASE_DIR}/externals/node24/bin/node --version | sed 's/v//')\"; \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \
