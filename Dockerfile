@@ -5,6 +5,10 @@ FROM golang:latest@sha256:ec47ea3725fea0cc88f6de94919aef19f40f12fc1ec0e2d1b3426d
 FROM ghcr.io/ko-build/ko:v0.19.1@sha256:504badc509e58f193a6b9f5527ae8885f8d61b38187b2d9580e15c34d027a082 AS ko
 FROM ghcr.io/dskiff/tko:bin@sha256:22d093ac97100fc318e74724ecdd1757ebdc46f5d50b406302cb49ceb354f848 AS tko
 FROM ghcr.io/astral-sh/uv:latest@sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85 AS uv
+# Node's major version follows the default `node` on GitHub-hosted Ubuntu runners
+# (actions/runner-images toolset), not the newest Node release, so renovate.json turns off
+# major bumps for this image. Change the tag by hand when the hosted runners' default changes.
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS node
 
 FROM ghcr.io/actions/actions-runner:latest@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300 AS base
 
@@ -24,6 +28,16 @@ COPY --from=deno    --chown=root:0 /deno ${BIN_OUT}/
 COPY --from=ko      --chown=root:0 /ko-app/ko ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
 COPY --from=uv      --chown=root:0 /uv /uvx ${BIN_OUT}/
+
+# Rebuild the Node install tree (minus docs) so it lands in the final image as one layer.
+# The npm/npx/corepack links are recreated because COPY would follow them.
+ENV NODE_OUT=/work/node
+COPY --from=node    --chown=root:0 /usr/local/bin/node ${NODE_OUT}/bin/
+COPY --from=node    --chown=root:0 /usr/local/lib/node_modules ${NODE_OUT}/lib/node_modules
+COPY --from=node    --chown=root:0 /usr/local/include/node ${NODE_OUT}/include/node
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js ${NODE_OUT}/bin/npm && \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js ${NODE_OUT}/bin/npx && \
+    ln -s ../lib/node_modules/corepack/dist/corepack.js ${NODE_OUT}/bin/corepack
 
 FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 # see: https://github.com/actions/runner/blob/main/images/Dockerfile
@@ -45,6 +59,10 @@ COPY --from=builder --chown=root:0 /work/bin/* ${BIN_DIR}/
 
 # Setup runner first to get access to installdependencies.sh
 COPY --from=base --chown=root:0 /home/runner ${BASE_DIR}
+
+# Node lives under ${BASE_DIR} so that at runtime it sits in the writable /home/runner, where
+# `npm install -g` and `corepack enable` can write next to it (as on GitHub-hosted runners).
+COPY --from=builder --chown=root:0 /work/node ${BASE_DIR}/.node
 
 # Install deps
 RUN useradd -m $USERNAME -u $UID && \
@@ -140,8 +158,8 @@ RUN mkdir -p "$FFMPEG_PREFIX" && \
     chmod -R g+r "$FFMPEG_PREFIX" && \
     find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
 
-# Add runtime paths for golang + builtin node + cargo + user-local bin (uv tools/pythons) to PATH
-ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node24/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
+# Add runtime paths for golang + node + cargo + user-local bin (uv tools/pythons) to PATH
+ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/.node/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
 
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
@@ -152,7 +170,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"go: $(go version | awk '{print $3}' | sed 's/go//')\"; \
     echo \"java: $(java -version 2>&1 | head -n1 | awk -F'\"' '{print $2}' || echo 'unknown')\"; \
     echo \"ko: $(ko version 2>&1 | head -n1 | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' || echo 'unknown')\"; \
-    echo \"node: $(${BASE_DIR}/externals/node24/bin/node --version | sed 's/v//')\"; \
+    echo \"node: $(${BASE_DIR}/.node/bin/node --version | sed 's/v//')\"; \
     echo \"rustc: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/rustc --version | awk '{print $2}')\"; \
     echo \"cargo: $(CARGO_HOME=${BASE_DIR}/.cargo RUSTUP_HOME=${BASE_DIR}/.rustup ${BASE_DIR}/.cargo/bin/cargo --version | awk '{print $2}')\"; \
     echo \"tko: $(tko version)\"; \

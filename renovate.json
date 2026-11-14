@@ -4,5 +4,14 @@
       "config:best-practices",
       "default:automergeDigest"
     ],
-    "autoApprove": true
+    "autoApprove": true,
+    "packageRules": [
+      {
+        "description": "Node's major follows the default node on GitHub-hosted Ubuntu runners (actions/runner-images), not the newest Node release; bump it by hand when that default changes",
+        "matchDatasources": ["docker"],
+        "matchPackageNames": ["node"],
+        "matchUpdateTypes": ["major"],
+        "enabled": false
+      }
+    ]
   }
