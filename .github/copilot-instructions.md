@@ -7,7 +7,7 @@ This repository contains a minimal Ubuntu-based GitHub Actions runner Docker ima
 **Key Technologies:**
 - Base: Ubuntu Noble (24.04 LTS)
 - GitHub Actions runner from `ghcr.io/actions/actions-runner:latest`
-- Languages: Go, Node.js 20, Rust, Python, Bun, Deno
+- Languages: Go, Node.js 20, Rust, Python, Bun, Deno, Zig
 - Package/toolchain managers: uv (also manages the bundled Python), rustup
 - Build tools: Ko (for Go container builds), tko (for rootless container building)
 - Container: Docker (rootless compatible)
@@ -18,13 +18,15 @@ This repository contains a minimal Ubuntu-based GitHub Actions runner Docker ima
 The Dockerfile uses a multi-stage build pattern:
 1. Binary extraction stages (bun, deno, golang, ko, tko, uv) - extract binaries from official images
 2. Builder stage - collects the standalone binaries into one directory
-3. Final Ubuntu-based stage - assembles the runner with all tools
+3. Zig stage - downloads the pinned Zig release tarball from the community mirrors and verifies its minisign signature (Zig has no official image)
+4. Final Ubuntu-based stage - assembles the runner with all tools
 
 **Key Design Decisions:**
 - Uses `/home/runner_base` at build time to stage content that will be copied to `/home/runner` at runtime
 - Runtime expects `/tmp` and `/home/runner` to be mounted as volumes, allowing `readOnlyRootFilesystem: true`
 - Rust toolchain installed in `${BASE_DIR}/.cargo` and `${BASE_DIR}/.rustup` to persist across volume mounts
 - Python is installed by `uv python install` into `/opt/python` (read-only at runtime, stdlib pre-compiled to bytecode), with `python`/`python3`/`python3.x` linked into `/usr/local/bin`. `UV_PYTHON_INSTALL_DIR` is only set at build time, so runtime `uv python install` uses its default writable dir under `/home/runner`
+- Zig is unpacked into `/opt/zig` (on PATH; read-only at runtime, it finds `lib/` next to the executable). Its caches go to `~/.cache/zig` under the writable `/home/runner`
 - Runner user has UID 1001, GID 0 for OpenShift compatibility
 
 ## Project Structure
@@ -49,7 +51,7 @@ docker build -t rootless-ubuntu-arc-runner .
 ```
 
 The build process:
-1. Extracts binaries from official images (bun, deno, go, ko, tko, uv)
+1. Extracts binaries from official images (bun, deno, go, ko, tko, uv) and fetches the verified Zig tarball
 2. Assembles final Ubuntu image with all tools and dependencies
 3. Installs Rust toolchain and the latest stable Python (via uv)
 4. Sets up GitHub Actions runner from base image
@@ -102,11 +104,13 @@ All image references use SHA256 digests for security and reproducibility:
 - Bun, Deno, Golang, Ko, TKO, uv: Extracted from official images
 - Ko: pinned to a release tag of `ghcr.io/ko-build/ko` (its `latest` tag tracks ko's main branch, not releases); the binary lives at `/ko-app/ko`
 - Python: latest stable known to the pinned uv release at build time
+- Zig: `ARG ZIG_VERSION`, tracked by Renovate (Codeberg tags of `ziglang/zig`). Per https://ziglang.org/download/community-mirrors/, the tarball comes from a shuffled list of community mirrors with ziglang.org as last resort, so every download must be verified with minisign against the ZSF key, including the `file:` name in the trusted comment
 - Actions runner: From `ghcr.io/actions/actions-runner:latest`
 
 **Renovate:**
 Automated dependency updates configured in `renovate.json`:
 - Extends best practices config
+- `customManagers:dockerfileVersions` updates `ARG`/`ENV *_VERSION` lines that have a `# renovate: datasource=... depName=...` comment directly above them
 - Auto-merges digest updates
 - Auto-approves updates
 
@@ -114,7 +118,7 @@ Automated dependency updates configured in `renovate.json`:
 
 **Adding a new binary/tool:**
 1. If available as a Docker image, add a new stage in Dockerfile and COPY from it into `${BIN_OUT}` in the builder stage
-2. If only downloadable, add a pinned, checksummed fetch step to the builder stage
+2. If only downloadable, add a pinned, checksummed (or signature-verified) fetch step to the builder stage, or to its own stage if it needs extra tooling (see the zig stage)
 3. Ensure binary is copied to `${BIN_DIR}` in final stage
 4. Test the build completes successfully
 
@@ -135,7 +139,7 @@ docker inspect <image> | grep -i digest
 
 1. **Always test Docker builds** after making changes - run `docker build .` locally
 2. **Preserve digest pinning** - use SHA256 digests for all image references
-3. **PATH considerations** - PATH includes Go, Node, Cargo and `/home/runner/.local/bin` (uv tools / uv-installed Pythons); the bundled Python is linked into `/usr/local/bin`
+3. **PATH considerations** - PATH includes Go, Zig (`/opt/zig`), Node, Cargo and `/home/runner/.local/bin` (uv tools / uv-installed Pythons); the bundled Python is linked into `/usr/local/bin`
 4. **Volume mounts** - Remember that `/home/runner` is mounted at runtime, so build-time content must go in `/home/runner_base`
 5. **Rootless compatibility** - Avoid requiring root privileges for runtime operations
 6. **No removal of existing tools** - This image is used in production; don't remove tools without explicit requirement

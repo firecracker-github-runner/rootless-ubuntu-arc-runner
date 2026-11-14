@@ -14,6 +14,7 @@ Includes:
 - Rust (via rustup with latest stable toolchain)
 - tko (allowing rootless container building for quarkus, etc)
 - uv / uvx
+- Zig (pinned release, verified official tarball in /opt/zig; also usable as a C/C++ cross-compiler via `zig cc`)
 
 Expects:
 - /tmp and /home/runner to be be mounted as volumes (allowing `readOnlyRootFilesystem: true` on the runner container)

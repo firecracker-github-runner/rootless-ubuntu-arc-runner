@@ -25,6 +25,48 @@ COPY --from=ko      --chown=root:0 /ko-app/ko ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
 COPY --from=uv      --chown=root:0 /uv /uvx ${BIN_OUT}/
 
+# Zig has no official container image, so fetch its release tarball the way
+# https://ziglang.org/download/community-mirrors/ asks automated downloads to: try the
+# community mirrors in random order (ziglang.org is a single host with no uptime guarantee,
+# so it is only the last resort) and verify the minisign signature of whatever is served
+# against the ZSF key, including the file name in its trusted comment (prevents downgrades).
+FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5 AS zig
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl minisign xz-utils && \
+    rm -rf /var/lib/apt/lists/*
+# renovate: datasource=forgejo-tags depName=ziglang/zig registryUrl=https://codeberg.org
+ARG ZIG_VERSION=0.17.1
+# ZSF release signing key, published at https://ziglang.org/download/
+ARG ZIG_PUBKEY=RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U
+RUN <<'EOF'
+set -eu
+tarball="zig-$(uname -m)-linux-${ZIG_VERSION}.tar.xz"
+fetch() {
+    curl -fsSL --retry 2 --connect-timeout 10 --speed-limit 102400 --speed-time 30 "$@"
+}
+cd /tmp
+# An unreachable mirror list leaves only the ziglang.org fallback.
+mirrors=$(fetch https://ziglang.org/download/community-mirrors.txt | shuf)
+verified=
+for base in ${mirrors} "https://ziglang.org/download/${ZIG_VERSION}"; do
+    if fetch -o "${tarball}" "${base}/${tarball}?source=dockerfile" &&
+        fetch -o "${tarball}.minisig" "${base}/${tarball}.minisig?source=dockerfile" &&
+        comment=$(minisign -V -Q -P "${ZIG_PUBKEY}" -m "${tarball}") &&
+        printf '%s\n' "${comment}" | tr '\t' '\n' | grep -qxF "file:${tarball}"; then
+        echo "Verified ${tarball} from ${base}"
+        verified=1
+        break
+    fi
+    echo "No verified ${tarball} from ${base}, trying the next source" >&2
+done
+[ -n "${verified}" ] || { echo "No source served a verified ${tarball}" >&2; exit 1; }
+mkdir -p /opt/zig
+tar -xJf "${tarball}" -C /opt/zig --strip-components=1 --no-same-owner
+rm -f "${tarball}" "${tarball}.minisig"
+chmod -R g+r /opt/zig
+find /opt/zig -type d -exec chmod g+x {} +
+EOF
+
 FROM ubuntu:noble@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 # see: https://github.com/actions/runner/blob/main/images/Dockerfile
 
@@ -42,6 +84,9 @@ ENV RUNTIME_HOME_DIR=/home/${USERNAME}
 # Add deps from images
 COPY --from=golang  --chown=root:0 /usr/local/go /usr/local/
 COPY --from=builder --chown=root:0 /work/bin/* ${BIN_DIR}/
+# Zig locates its lib/ dir next to the executable, so it stays in one tree. Like Python, it
+# lives outside ${BASE_DIR} and is read-only at runtime: Zig's caches go to ~/.cache/zig.
+COPY --from=zig     --chown=root:0 /opt/zig /opt/zig
 
 # Setup runner first to get access to installdependencies.sh
 COPY --from=base --chown=root:0 /home/runner ${BASE_DIR}
@@ -140,8 +185,8 @@ RUN mkdir -p "$FFMPEG_PREFIX" && \
     chmod -R g+r "$FFMPEG_PREFIX" && \
     find "$FFMPEG_PREFIX" -type d -exec chmod g+x {} +
 
-# Add runtime paths for golang + builtin node + cargo + user-local bin (uv tools/pythons) to PATH
-ENV PATH=/usr/local/go:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
+# Add runtime paths for golang + zig + builtin node + cargo + user-local bin (uv tools/pythons) to PATH
+ENV PATH=/usr/local/go:/opt/zig:${RUNTIME_HOME_DIR}/externals/node20/bin:${RUNTIME_HOME_DIR}/.cargo/bin:${RUNTIME_HOME_DIR}/.local/bin:${PATH}
 
 # Generate versions.yaml file (run as root to have write permissions to BASE_DIR)
 RUN ["/bin/bash", "-c", "set -eo pipefail && \
@@ -159,6 +204,7 @@ RUN ["/bin/bash", "-c", "set -eo pipefail && \
     echo \"uv: $(uv --version | awk '{print $2}')\"; \
     echo \"python: $(python3 --version | awk '{print $2}')\"; \
     echo \"ffmpeg: $(pkg-config --modversion --static libavformat)\"; \
+    echo \"zig: $(zig version)\"; \
     } | tee ${BASE_DIR}/versions.yaml && \
     chmod g+r ${BASE_DIR}/versions.yaml"]
 
