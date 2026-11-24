@@ -8,7 +8,7 @@ FROM ghcr.io/astral-sh/uv:latest@sha256:d3b601f0c7b118bc1753febf7c41cc80981df678
 
 FROM ghcr.io/actions/actions-runner:latest@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300 AS base
 
-FROM ubuntu:noble@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b AS builder
+FROM ubuntu:resolute@sha256:d66b366dac61b575bee2aef07e9c26e8070096fbe84a3d4d3eb0da069b5d76db AS builder
 # Collect standalone binaries in one directory so they land in the final image as a single layer
 
 ENV WORKDIR=/work
@@ -25,7 +25,7 @@ COPY --from=ko      --chown=root:0 /ko-app/ko ${BIN_OUT}/
 COPY --from=tko     --chown=root:0 /usr/local/bin/tko ${BIN_OUT}/
 COPY --from=uv      --chown=root:0 /uv /uvx ${BIN_OUT}/
 
-FROM ubuntu:noble@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
+FROM ubuntu:resolute@sha256:d66b366dac61b575bee2aef07e9c26e8070096fbe84a3d4d3eb0da069b5d76db
 # see: https://github.com/actions/runner/blob/main/images/Dockerfile
 
 ENV DEBIAN_FRONTEND=noninteractive
